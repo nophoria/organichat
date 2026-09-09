@@ -18,9 +18,9 @@ Self-clearing chats would be a hub for bullying and discrimination online, but y
 - Repeat!
 
 ## roadmap
-[] friends list
-[] chat capability
-[] emoticon library (rather than emoji)
+- [ ] friends list
+- [ ] chat capability
+- [ ] emoticon library (rather than emoji)
 
 _organichat._ is built with the [Textual](https://github.com/textualize/textual/) library, a brilliant and easy to use TUI framework for python.
 
