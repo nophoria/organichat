@@ -1,0 +1,8 @@
+#msginput, #msgsend {
+  height: 5;
+}
+
+#msgsend {
+  margin: 0 1;
+  border: $primary;
+}
