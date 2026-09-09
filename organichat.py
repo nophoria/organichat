@@ -1,10 +1,11 @@
 # "there is high-res ascii art of ppl's ascii parts" -js
 from time import localtime, strftime
-from textual.app        import App, ComposeResult
+
+from textual.app import App, ComposeResult
+from textual.binding import Binding
 from textual.containers import HorizontalGroup, VerticalScroll
-from textual.binding    import Binding
-from textual.widget     import Widget
-from textual.widgets    import Button, Footer, Header, TextArea, Label, Markdown
+from textual.widget import Widget
+from textual.widgets import Button, Footer, Header, Label, Markdown, TextArea
 
 msg_sent = ""
 msg_user = ""
@@ -60,8 +61,8 @@ class Msg(Widget):
 
     def compose(self) -> ComposeResult:
         """Compose message instance"""
-        yield Label(self.text)
-        yield Markdown(msg_sent)
+        yield Label(self.text, classes="msgtitle")
+        yield Markdown(msg_sent, classes="msgcontent")
 
                 
 
@@ -73,7 +74,7 @@ class OrganichatClient(App):
 
     CSS_PATH = "organicss.tcss"
 
-    BINDINGS = [
+    BINDINGS = [  # noqa: RUF012
         Binding("ctrl+d", "toggle_dark", "Toggle dark mode", priority=True),
         Binding("ctrl+enter", "send_msg", "Send message")
     ]

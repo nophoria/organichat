@@ -1,8 +1,24 @@
-#msginput, #msgsend {
+MsgInput, MsgSend {
   height: 5;
 }
 
 #msgsend {
   margin: 0 1;
   border: $primary;
+}
+
+MsgHistory {
+  padding: 0;
+}
+
+Msg {
+  padding: 0 2;
+}
+
+.msgtitle {
+  border: solid $background;
+}
+
+.msgcontent {
+  border: solid $surface;
 }
