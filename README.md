@@ -22,8 +22,6 @@ Self-clearing chats would be a hub for bullying and discrimination online, but y
 - [ ] chat capability
 - [ ] emoticon library (rather than emoji)
 
-_organichat._ is built with the [Textual](https://github.com/textualize/textual/) library, a brilliant and easy to use TUI framework for python.
-
 ## tty
 One of my main goals of _organichat._ is having most of the functionality fully work on a regular TTY - the most basic terminal you can get. I can guarantee you that a TTY will be able to:
 - send and receive messages
@@ -37,3 +35,7 @@ TTYs are obviously very limited in terms of (default) font so due to that I want
 AI is a fancy info-stealer ripping code from across the internet. It infringes on people's hard work and cannot think for itself. That is why every character of code in _organichat._ is completely hand-written. If you are going to make a PR (thank you!) then expect it to be rejected if _any_ form of AI was used during it's production.
 
 <img width="131" height="42" alt="Scripted-By-Humans-Not-By-AI-Badge-white" src="https://github.com/user-attachments/assets/ac3dc558-58ab-4c6a-9a19-aa9af4528418" />
+
+# 
+
+_organichat._ is built with the [Textual](https://github.com/textualize/textual/) library, a brilliant and easy to use TUI framework for python.
