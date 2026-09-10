@@ -6,7 +6,7 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import HorizontalGroup, VerticalScroll
 from textual.widget import Widget
-from textual.widgets import Button, Footer, Header, Label, Markdown, TextArea
+from textual.widgets import Button, Footer, Header, Label, TextArea
 
 msg_sent = ""
 msg_user = ""
@@ -82,6 +82,11 @@ class Msg(Widget):
         yield md_msg
 
                 
+class ClearMsg(HorizontalGroup):
+    """A widget to display a message upon chat clear"""
+
+    def compose(self) -> None:
+        yield Label("[i d]The chat was cleared[/]")
 
 class MsgHistory(VerticalScroll):
     """A widget to display message history"""
@@ -152,9 +157,13 @@ class OrganichatClient(App):
         msgs = self.query(Msg)
         if msgs:
             msgs.remove()
+
+        msgs = self.query(ClearMsg)
+        if msgs:
+            msgs.remove()
         
         history = self.query_one("#msghistory", MsgHistory)
-        history.mount(Markdown("# _*The chat was cleared*_", id="clearmsg"))
+        history.mount(ClearMsg())
 
 if __name__ == "__main__":
     app = OrganichatClient()

@@ -2,10 +2,11 @@ TitleBar {
   background: $surface;
 }
 
-#clearmsg {
+ClearMsg {
   padding: 1;
   align: center middle;
   width: 100%;
+  color: $text-muted;
 }
 
 #titletext {
@@ -17,6 +18,7 @@ TitleBar {
 
 #leavebutton {
   align: right middle;
+  width: 9;
 }
 
 MsgInput, MsgSend {
