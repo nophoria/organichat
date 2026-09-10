@@ -14,6 +14,7 @@ MsgHistory {
 Msg {
   padding: 0 2;
   height: auto;
+  opacity: 0;
 }
 
 .msgtitle {
@@ -21,5 +22,9 @@ Msg {
 }
 
 .msgcontent {
-  border: solid $panel;
+  border: solid $surface;
+  border-title-color: $text-muted;
+  height: auto;
+  background: $background;
+  width: 100%;
 }

@@ -1,4 +1,5 @@
 # "there is high-res ascii art of ppl's ascii parts" -js
+import re
 from time import localtime, strftime
 
 from textual.app import App, ComposeResult
@@ -34,6 +35,7 @@ class MsgInput(HorizontalGroup):
 
         msg = msg_input.text
         if msg.strip():
+            msg = msg.strip()
             msg_sent = msg
             msg_input.text = ""
             history = self.app.query_one("#msghistory", MsgHistory)
@@ -61,10 +63,14 @@ class Msg(Widget):
         self.time = strftime("%H:%M:%S", localtime())
         self.text = f"[b]{msg_user}[/b] | [d]{self.time}[/d]"
 
+    def on_mount(self):
+        self.styles.animate("opacity", value=1.0, duration=0.8, easing="out_quart")
+
+
     def compose(self) -> ComposeResult:
         """Compose message instance"""
 
-        md_msg = Markdown(msg_sent, classes="msgcontent")
+        md_msg = Label(msg_sent, classes="msgcontent")
         md_msg.border_title = self.text
         yield md_msg
 
