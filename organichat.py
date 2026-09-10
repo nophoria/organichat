@@ -42,6 +42,8 @@ class MsgInput(HorizontalGroup):
             history.mount(new_msg)
             new_msg.scroll_visible()
 
+            msg_input.focus()
+
 class Msg(Widget):
     """A widget to display a given message"""
 
@@ -113,6 +115,8 @@ class OrganichatClient(App):
             new_msg = Msg()
             history.mount(new_msg)
             new_msg.scroll_visible()
+
+            msg_input.focus()
 
 
 if __name__ == "__main__":
