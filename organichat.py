@@ -122,7 +122,7 @@ class OrganichatClient(App):
     def action_toggle_dark(self) -> None:
         """An action to toggle dark mode."""
         self.theme = (
-            "tokyo-night" if self.theme == "solarized-light" else "solarized-light"
+            "tokyo-night" if self.theme == "catppuccin-latte" else "catppuccin-latte"
         )
 
     def action_send_msg(self) -> None:
