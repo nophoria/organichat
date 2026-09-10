@@ -1,3 +1,24 @@
+TitleBar {
+  background: $surface;
+}
+
+#clearmsg {
+  padding: 1;
+  align: center middle;
+  width: 100%;
+}
+
+#titletext {
+  padding: 1 1;
+  width: 2fr;
+  align: left middle;
+  height: auto;
+}
+
+#leavebutton {
+  align: right middle;
+}
+
 MsgInput, MsgSend {
   height: 5;
 }
@@ -12,7 +33,7 @@ MsgHistory {
 }
 
 Msg {
-  padding: 0 2;
+  padding: 1 2;
   height: auto;
   opacity: 0;
 }

@@ -10,6 +10,15 @@ from textual.widgets import Button, Footer, Header, Label, Markdown, TextArea
 
 msg_sent = ""
 msg_user = ""
+chatter = "your dad"
+you = "0.0.0.0" #TODO: implement ip addr detection - public or local?
+
+class TitleBar(HorizontalGroup):
+    """The titlebar widget shown at the top of a conversation"""
+    def compose(self):
+        text = f"[b]Chatting with:[/b] {chatter}"  # noqa: W605
+        yield Label(text, id="titletext")
+        yield Button("Leave", variant="error", id="leavebutton")
 
 class MsgSend(Button):
     """A widget to send a message."""
@@ -35,8 +44,7 @@ class MsgInput(HorizontalGroup):
 
         msg = msg_input.text
         if msg.strip():
-            msg = msg.strip()
-            msg_sent = msg
+            msg_sent = msg.strip()
             msg_input.text = ""
             history = self.app.query_one("#msghistory", MsgHistory)
 
@@ -66,11 +74,10 @@ class Msg(Widget):
     def on_mount(self):
         self.styles.animate("opacity", value=1.0, duration=0.8, easing="out_quart")
 
-
     def compose(self) -> ComposeResult:
         """Compose message instance"""
 
-        md_msg = Label(msg_sent, classes="msgcontent")
+        md_msg = Label(msg_sent.strip(), classes="msgcontent")
         md_msg.border_title = self.text
         yield md_msg
 
@@ -93,12 +100,24 @@ class OrganichatClient(App):
         super().__init__()
         self.theme = "tokyo-night"
 
+        self.CMD_PREFIX = "!"
+        self.CMDS = {
+            f"{self.CMD_PREFIX}ping" : lambda: self.bell(),
+            f"{self.CMD_PREFIX}clear" : lambda: self.clear()
+        }
+
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
         yield Header()
+        yield TitleBar()
         yield MsgHistory(id="msghistory")
-        yield MsgInput()
+        self.msg_input = MsgInput(id="msginputcontainer")
+        yield self.msg_input
         yield Footer()
+
+    def on_mount(self) -> None:
+        msg_input_txt = self.msg_input.query_one("#msginput", MsgInputTxt)
+        msg_input_txt.focus()
 
     def action_toggle_dark(self) -> None:
         """An action to toggle dark mode."""
@@ -126,6 +145,16 @@ class OrganichatClient(App):
 
             msg_input.focus()
 
+            if msg in self.CMDS:
+                self.CMDS[msg]()
+    
+    def clear(self):
+        msgs = self.query(Msg)
+        if msgs:
+            msgs.remove()
+        
+        history = self.query_one("#msghistory", MsgHistory)
+        history.mount(Markdown("# _*The chat was cleared*_", id="clearmsg"))
 
 if __name__ == "__main__":
     app = OrganichatClient()
