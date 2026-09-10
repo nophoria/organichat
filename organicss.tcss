@@ -13,6 +13,7 @@ MsgHistory {
 
 Msg {
   padding: 0 2;
+  height: auto;
 }
 
 .msgtitle {
