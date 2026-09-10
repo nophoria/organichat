@@ -63,8 +63,10 @@ class Msg(Widget):
 
     def compose(self) -> ComposeResult:
         """Compose message instance"""
-        yield Label(self.text, classes="msgtitle")
-        yield Markdown(msg_sent, classes="msgcontent")
+
+        md_msg = Markdown(msg_sent, classes="msgcontent")
+        md_msg.border_title = self.text
+        yield md_msg
 
                 
 
