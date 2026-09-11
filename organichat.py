@@ -1,4 +1,5 @@
 # "there is high-res ascii art of ppl's ascii parts" -js
+import json
 import re
 from time import localtime, strftime
 
@@ -6,17 +7,53 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import HorizontalGroup, VerticalScroll
 from textual.widget import Widget
-from textual.widgets import Button, Footer, Header, Label, TextArea
+from textual.widgets import Button, Footer, Header, Input, Label, ListView, TextArea
 
 msg_sent = ""
 msg_user = ""
 chatter = "your dad"
 you = "0.0.0.0" #TODO: implement ip addr detection - public or local?
 
+class StartDialog(VerticalScroll):
+    """Widget to initiate a connection"""
+
+    def __init__(self):
+        super().__init__()
+
+        try:
+            self.saved_err = False
+            self.saved_dec_err = False
+            with open("saved.json", 'r') as f:
+                self.saved = json.load(f)
+        except json.JSONDecodeError as e:
+            self.saved_dec_error = True
+            self.saved = {}
+        except Exception as e:
+            self.saved_err = e
+            self.saved = {}
+
+    def compose(self) -> ComposeResult:
+        yield Input(placeholder="ip address...", id="ipentry")
+
+        if len(self.saved) > 0:
+            yield Label("or pick from your saved devices...", id="")
+            yield ListView()
+
+            if self.saved_err:
+                yield Label(f"Error while reading saved devices list: {e}", variant="error")
+            else:
+                for device in self.saved:
+                    self.query_one(ListView).mount(Label(device))
+
+    def on_input_submitted(self):
+        """connect to client here"""
+        global chatter
+        chatter = self.query_one(Input).text
+
 class TitleBar(HorizontalGroup):
     """The titlebar widget shown at the top of a conversation"""
     def compose(self):
-        text = f"[b]Chatting with:[/b] {chatter}"  # noqa: W605
+        text = f"[b]Chatting with:[/b] {chatter}"
         yield Label(text, id="titletext")
         yield Button("Leave", variant="error", id="leavebutton")
 
@@ -36,23 +73,7 @@ class MsgInput(HorizontalGroup):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Send the message over tcp"""
-        global msg_sent
-        global msg_user
-
-        msg_input = self.query_one("#msginput", MsgInputTxt)
-        msg_user = "0.0.0.0"
-
-        msg = msg_input.text
-        if msg.strip():
-            msg_sent = msg.strip()
-            msg_input.text = ""
-            history = self.app.query_one("#msghistory", MsgHistory)
-
-            new_msg = Msg()
-            history.mount(new_msg)
-            new_msg.scroll_visible()
-
-            msg_input.focus()
+        self.app.action_send_msg()
 
 class Msg(Widget):
     """A widget to display a given message"""
@@ -107,7 +128,7 @@ class OrganichatClient(App):
 
         self.CMD_PREFIX = "!"
         self.CMDS = {
-            f"{self.CMD_PREFIX}ping" : lambda: self.bell(),
+            f"{self.CMD_PREFIX}ping" : lambda: self.ping(),
             f"{self.CMD_PREFIX}clear" : lambda: self.clear()
         }
 
@@ -140,6 +161,7 @@ class OrganichatClient(App):
 
         msg = msg_input.text
         if msg.strip():
+            msg = msg.strip()
             msg_sent = msg
             msg_input.text = ""
             history = self.query_one("#msghistory", MsgHistory)
@@ -164,6 +186,12 @@ class OrganichatClient(App):
         
         history = self.query_one("#msghistory", MsgHistory)
         history.mount(ClearMsg())
+
+        self.notify("Cleared chat successfully!")
+    
+    def ping(self):
+        self.bell()
+        self.notify("Pinged successfully!")
 
 if __name__ == "__main__":
     app = OrganichatClient()

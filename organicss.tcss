@@ -27,7 +27,7 @@ MsgInput, MsgSend {
 
 #msgsend {
   margin: 0 1;
-  border: $primary;
+  background: $surface;
 }
 
 MsgHistory {
