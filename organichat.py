@@ -6,7 +6,17 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import HorizontalGroup, VerticalScroll
 from textual.widget import Widget
-from textual.widgets import Button, Footer, Header, Input, Label, ListView, ListItem, TextArea
+from textual.widgets import (
+    Button,
+    Footer,
+    Header,
+    Input,
+    Label,
+    ListItem,
+    ListView,
+    Markdown,
+    TextArea,
+)
 
 msg_sent = ""
 msg_user = ""
@@ -35,7 +45,7 @@ class StartDialog(Widget):
         yield Input(placeholder="ip address...", id="ipentry")
 
         if len(self.saved) > 0:
-            yield Label("or pick from your saved devices...", id="saveddevtitle")
+            yield Label("[i d]or pick from your saved devices...[/]", id="saveddevtitle")
         
         if self.saved_err:
             yield Label(f"Error while reading saved devices list: {self.saved_err}", variant="error")
@@ -228,8 +238,8 @@ class OrganichatClient(App):
         # yield self.msg_input
         yield Footer()
 
-        self.startdlg.display = False
-        self.chatwin.display = True
+        self.startdlg.display = True
+        self.chatwin.display = False
 
     def on_mount(self) -> None:
         msg_input_txt = self.chatwin.msg_input.query_one("#msginput", MsgInputTxt)
@@ -240,30 +250,6 @@ class OrganichatClient(App):
         self.theme = (
             "tokyo-night" if self.theme == "catppuccin-latte" else "catppuccin-latte"
         )
-
-    def action_send_msg(self) -> None:
-        """Send the message over tcp"""
-        global msg_sent
-        global msg_user
-
-        msg_input = self.chatwin.query_one("#msginput", MsgInputTxt)
-        msg_user = "0.0.0.0"
-
-        msg = msg_input.text
-        if msg.strip():
-            msg = msg.strip()
-            msg_sent = msg
-            msg_input.text = ""
-            history = self.chatwin.query_one("#msghistory", MsgHistory)
-
-            new_msg = Msg()
-            history.mount(new_msg)
-            new_msg.scroll_visible()
-
-            msg_input.focus()
-
-            if msg in self.CMDS:
-                self.CMDS[msg]()
     
     def clear(self):
         msgs = self.chatwin.query(Msg)
