@@ -1,20 +1,19 @@
 # "there is high-res ascii art of ppl's ascii parts" -js
 import json
-import re
 from time import localtime, strftime
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import HorizontalGroup, VerticalScroll
 from textual.widget import Widget
-from textual.widgets import Button, Footer, Header, Input, Label, ListView, TextArea
+from textual.widgets import Button, Footer, Header, Input, Label, ListView, ListItem, TextArea
 
 msg_sent = ""
 msg_user = ""
 chatter = "your dad"
 you = "0.0.0.0" #TODO: implement ip addr detection - public or local?
 
-class StartDialog(VerticalScroll):
+class StartDialog(Widget):
     """Widget to initiate a connection"""
 
     def __init__(self):
@@ -26,7 +25,7 @@ class StartDialog(VerticalScroll):
             with open("saved.json", 'r') as f:
                 self.saved = json.load(f)
         except json.JSONDecodeError as e:
-            self.saved_dec_error = True
+            self.saved_dec_err = e
             self.saved = {}
         except Exception as e:
             self.saved_err = e
@@ -36,19 +35,21 @@ class StartDialog(VerticalScroll):
         yield Input(placeholder="ip address...", id="ipentry")
 
         if len(self.saved) > 0:
-            yield Label("or pick from your saved devices...", id="")
-            yield ListView()
-
-            if self.saved_err:
-                yield Label(f"Error while reading saved devices list: {e}", variant="error")
-            else:
-                for device in self.saved:
-                    self.query_one(ListView).mount(Label(device))
+            yield Label("or pick from your saved devices...", id="saveddevtitle")
+        
+        if self.saved_err:
+            yield Label(f"Error while reading saved devices list: {self.saved_err}", variant="error")
+        elif self.saved_dec_err:
+            yield Label(f"Invalid saved devices list: {self.saved_dec_err}", variant="error")
+        
+        with ListView():
+            for device in self.saved:
+                yield ListItem(Label(rf"[b]{device}[/b] | [d]{self.saved[device]}[/]"))
 
     def on_input_submitted(self):
         """connect to client here"""
         global chatter
-        chatter = self.query_one(Input).text
+        chatter = self.query_one(Input).value
 
 class TitleBar(HorizontalGroup):
     """The titlebar widget shown at the top of a conversation"""
@@ -112,10 +113,8 @@ class ClearMsg(HorizontalGroup):
 class MsgHistory(VerticalScroll):
     """A widget to display message history"""
 
-class OrganichatClient(App):
-    """A Textual app to chat incognito :3"""
-
-    CSS_PATH = "organicss.tcss"
+class ChatWindow(Widget):
+    """Chat window for organichat"""
 
     BINDINGS = [  # noqa: RUF012
         Binding("ctrl+d", "toggle_dark", "Toggle dark mode", priority=True),
@@ -124,22 +123,20 @@ class OrganichatClient(App):
 
     def __init__(self):
         super().__init__()
-        self.theme = "tokyo-night"
 
         self.CMD_PREFIX = "!"
         self.CMDS = {
             f"{self.CMD_PREFIX}ping" : lambda: self.ping(),
-            f"{self.CMD_PREFIX}clear" : lambda: self.clear()
+            f"{self.CMD_PREFIX}clear" : lambda: self.clear(),
+            f"{self.CMD_PREFIX}leave" : lambda: self.leave()
         }
 
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
-        yield Header()
         yield TitleBar()
         yield MsgHistory(id="msghistory")
         self.msg_input = MsgInput(id="msginputcontainer")
         yield self.msg_input
-        yield Footer()
 
     def on_mount(self) -> None:
         msg_input_txt = self.msg_input.query_one("#msginput", MsgInputTxt)
@@ -187,11 +184,105 @@ class OrganichatClient(App):
         history = self.query_one("#msghistory", MsgHistory)
         history.mount(ClearMsg())
 
+        self.app.notify("Cleared chat successfully!")
+    
+    def ping(self):
+        self.app.bell()
+        self.app.notify("Pinged successfully!")
+    
+    def leave(self):
+        self.app.chatwin.display = False
+        self.app.startdlg.display = True
+
+
+class OrganichatClient(App):
+    """A Textual app to chat incognito :3"""
+
+    CSS_PATH = "organicss.tcss"
+
+    BINDINGS = [  # noqa: RUF012
+        Binding("ctrl+d", "toggle_dark", "Toggle dark mode", priority=True),
+        Binding("ctrl+enter", "send_msg", "Send message")
+    ]
+
+    def __init__(self):
+        super().__init__()
+        self.theme = "tokyo-night"
+
+        self.CMD_PREFIX = "!"
+        self.CMDS = {
+            f"{self.CMD_PREFIX}ping" : lambda: self.ping(),
+            f"{self.CMD_PREFIX}clear" : lambda: self.clear()
+        }
+
+    def compose(self) -> ComposeResult:
+        """Create child widgets for the app."""
+        yield Header()
+        self.startdlg = StartDialog()
+        yield self.startdlg
+        self.chatwin = ChatWindow()
+        yield self.chatwin
+        # yield TitleBar()
+        # yield MsgHistory(id="msghistory")
+        # self.msg_input = MsgInput(id="msginputcontainer")
+        # yield self.msg_input
+        yield Footer()
+
+        self.startdlg.display = False
+        self.chatwin.display = True
+
+    def on_mount(self) -> None:
+        msg_input_txt = self.chatwin.msg_input.query_one("#msginput", MsgInputTxt)
+        msg_input_txt.focus()
+
+    def action_toggle_dark(self) -> None:
+        """An action to toggle dark mode."""
+        self.theme = (
+            "tokyo-night" if self.theme == "catppuccin-latte" else "catppuccin-latte"
+        )
+
+    def action_send_msg(self) -> None:
+        """Send the message over tcp"""
+        global msg_sent
+        global msg_user
+
+        msg_input = self.chatwin.query_one("#msginput", MsgInputTxt)
+        msg_user = "0.0.0.0"
+
+        msg = msg_input.text
+        if msg.strip():
+            msg = msg.strip()
+            msg_sent = msg
+            msg_input.text = ""
+            history = self.chatwin.query_one("#msghistory", MsgHistory)
+
+            new_msg = Msg()
+            history.mount(new_msg)
+            new_msg.scroll_visible()
+
+            msg_input.focus()
+
+            if msg in self.CMDS:
+                self.CMDS[msg]()
+    
+    def clear(self):
+        msgs = self.chatwin.query(Msg)
+        if msgs:
+            msgs.remove()
+
+        clearmsgs = self.chatwin.query(ClearMsg)
+        if clearmsgs:
+            clearmsgs.remove()
+        
+        history = self.chatwin.query_one("#msghistory", MsgHistory)
+        history.mount(ClearMsg())
+
         self.notify("Cleared chat successfully!")
     
     def ping(self):
         self.bell()
         self.notify("Pinged successfully!")
+
 
 if __name__ == "__main__":
     app = OrganichatClient()
