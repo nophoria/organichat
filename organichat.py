@@ -14,7 +14,6 @@ from textual.widgets import (
     Label,
     ListItem,
     ListView,
-    Markdown,
     TextArea,
 )
 
@@ -49,12 +48,11 @@ class StartDialog(Widget):
         else:
             yield Label("[i d]save devices and they will show up below![/]", id="saveddevtitle")
         
-        if self.saved_err:
-            yield Label(f"Error while reading saved devices list: {self.saved_err}", variant="error")
-        elif self.saved_dec_err:
-            yield Label(f"Invalid saved devices list: {self.saved_dec_err}", variant="error")
-        
         with ListView():
+            if self.saved_err:
+                yield ListItem(Label(f"Error while reading saved devices list: {self.saved_err}", variant="error"))
+            elif self.saved_dec_err:
+                yield ListItem(Label(f"Invalid saved devices list: {self.saved_dec_err}", variant="error"))
             for device in self.saved:
                 yield ListItem(Label(rf"[b]{device}[/b] | [d]{self.saved[device]}[/]"))
 
@@ -86,15 +84,13 @@ class MsgInput(HorizontalGroup):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Send the message over tcp"""
-        self.app.action_send_msg()
+        self.app.chatwin.action_send_msg()
 
 class Msg(Widget):
     """A widget to display a given message"""
 
     def __init__(self) -> None:
         """Define variables"""
-        global msg_sent
-        global msg_user
 
         super().__init__()
 
