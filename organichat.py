@@ -46,6 +46,8 @@ class StartDialog(Widget):
 
         if len(self.saved) > 0:
             yield Label("[i d]or pick from your saved devices...[/]", id="saveddevtitle")
+        else:
+            yield Label("[i d]save devices and they will show up below![/]", id="saveddevtitle")
         
         if self.saved_err:
             yield Label(f"Error while reading saved devices list: {self.saved_err}", variant="error")
