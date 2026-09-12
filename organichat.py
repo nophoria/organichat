@@ -56,6 +56,9 @@ class StartDialog(Widget):
             for device in self.saved:
                 yield ListItem(Label(rf"[b]{device}[/b] | [d]{self.saved[device]}[/]"))
 
+    def on_list_view_selected(self):
+        global chatter
+        chatter = self.query_one(ListView).control.self.query_one(Label).text.split(" | ")[0]
     def on_input_submitted(self):
         """connect to client here"""
         global chatter
