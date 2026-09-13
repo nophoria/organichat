@@ -5,6 +5,7 @@ from time import localtime, strftime
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import HorizontalGroup, VerticalScroll
+from textual.reactive import reactive
 from textual.widget import Widget
 from textual.widgets import (
     Button,
@@ -19,8 +20,18 @@ from textual.widgets import (
 
 msg_sent = ""
 msg_user = ""
-chatter = "your dad"
 you = "0.0.0.0" #TODO: implement ip addr detection - public or local?
+chatter_ip = ""
+
+
+class LabelItem(ListItem):
+
+    def __init__(self, label: str) -> None:
+        super().__init__()
+        self.label = label
+
+    def compose( self ) -> ComposeResult:
+        yield Label(self.label)
 
 class StartDialog(Widget):
     """Widget to initiate a connection"""
@@ -54,28 +65,34 @@ class StartDialog(Widget):
             elif self.saved_dec_err:
                 yield ListItem(Label(f"Invalid saved devices list: {self.saved_dec_err}", variant="error"))
             for device in self.saved:
-                yield ListItem(Label(rf"[b]{device}[/b] | [d]{self.saved[device]}[/]"))
+                yield LabelItem(rf"[b]{device}[/b] | [d]{self.saved[device]}[/]")
 
-    def on_list_view_selected(self):
-        global chatter
-        chatter = self.query_one(ListView).control.self.query_one(Label).text.split(" | ")[0]
+    def on_list_view_selected(self, event: ListView.Selected):
+        self.app.chatter = event.item.label
+        self.app.startdlg.display = False
+        self.app.chatwin.display = True
+
     def on_input_submitted(self):
         """connect to client here"""
-        global chatter
-        chatter = self.query_one(Input).value
+        self.app.chatter = self.query_one(Input).value
 
 class TitleBar(HorizontalGroup):
     """The titlebar widget shown at the top of a conversation"""
     def compose(self):
-        text = f"[b]Chatting with:[/b] {chatter}"
-        yield Label(text, id="titletext")
+        yield Label("Chatting with: your d", id="titletext")
         yield Button("Leave", variant="error", id="leavebutton")
-
-class MsgSend(Button):
-    """A widget to send a message."""
+    
+    def update_title(self, current_chatter: str) -> None:
+        self.query_one("#titletext", Label).update(f"[b]Chatting with:[/b] {current_chatter}")
+    
+    def on_button_pressed(self) -> None:
+        self.app.chatwin.leave()
 
 class MsgInputTxt(TextArea):
     """A widget to enter a message."""
+
+class MsgSend(Button):
+    """A widget to send a message."""
 
 class MsgInput(HorizontalGroup):
     """A widget to enter a message."""
@@ -114,6 +131,12 @@ class Msg(Widget):
         md_msg.border_title = self.text
         yield md_msg
 
+
+class ConnectMsg(HorizontalGroup):
+    """A widget to display a message so the user can wait for the recipient to connect"""
+
+    def compose(self) -> None:
+        yield Label(f"[i d]Waiting for {self.app.chatter} to connect...[/]")
                 
 class ClearMsg(HorizontalGroup):
     """A widget to display a message upon chat clear"""
@@ -128,7 +151,6 @@ class ChatWindow(Widget):
     """Chat window for organichat"""
 
     BINDINGS = [  # noqa: RUF012
-        Binding("ctrl+d", "toggle_dark", "Toggle dark mode", priority=True),
         Binding("ctrl+enter", "send_msg", "Send message")
     ]
 
@@ -152,12 +174,6 @@ class ChatWindow(Widget):
     def on_mount(self) -> None:
         msg_input_txt = self.msg_input.query_one("#msginput", MsgInputTxt)
         msg_input_txt.focus()
-
-    def action_toggle_dark(self) -> None:
-        """An action to toggle dark mode."""
-        self.theme = (
-            "tokyo-night" if self.theme == "catppuccin-latte" else "catppuccin-latte"
-        )
 
     def action_send_msg(self) -> None:
         """Send the message over tcp"""
@@ -211,6 +227,8 @@ class OrganichatClient(App):
 
     CSS_PATH = "organicss.tcss"
 
+    chatter = reactive("your dad")
+
     BINDINGS = [  # noqa: RUF012
         Binding("ctrl+d", "toggle_dark", "Toggle dark mode", priority=True),
         Binding("ctrl+enter", "send_msg", "Send message")
@@ -219,12 +237,12 @@ class OrganichatClient(App):
     def __init__(self):
         super().__init__()
         self.theme = "tokyo-night"
-
-        self.CMD_PREFIX = "!"
-        self.CMDS = {
-            f"{self.CMD_PREFIX}ping" : lambda: self.ping(),
-            f"{self.CMD_PREFIX}clear" : lambda: self.clear()
-        }
+    
+    def watch_chatter(self, old_value: str, new_value: str) -> None:
+        title_bar = self.query_one(TitleBar)
+        title_bar.update_title(new_value)
+        self.clearchat()
+        self.on_mount()
 
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
@@ -252,7 +270,7 @@ class OrganichatClient(App):
             "tokyo-night" if self.theme == "catppuccin-latte" else "catppuccin-latte"
         )
     
-    def clear(self):
+    def clearchat(self):
         msgs = self.chatwin.query(Msg)
         if msgs:
             msgs.remove()
@@ -261,11 +279,17 @@ class OrganichatClient(App):
         if clearmsgs:
             clearmsgs.remove()
         
-        history = self.chatwin.query_one("#msghistory", MsgHistory)
-        history.mount(ClearMsg())
+        connmsgs = self.chatwin.query(ConnectMsg)
+        if connmsgs:
+            connmsgs.remove()
+        
+        msginput = self.chatwin.query_one(MsgInputTxt)
+        msginput.text = ""
 
-        self.notify("Cleared chat successfully!")
-    
+        connmsg = ConnectMsg()
+        self.chatwin.query_one(MsgHistory).mount(connmsg)
+        #msginput.read_only = True #TODO: once backend is done renable this to stop msg sendong until someone conn
+
     def ping(self):
         self.bell()
         self.notify("Pinged successfully!")

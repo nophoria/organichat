@@ -2,7 +2,7 @@ TitleBar {
   background: $surface;
 }
 
-ClearMsg {
+ClearMsg, ConnectMsg {
   padding: 1;
   align: center middle;
   width: 100%;
