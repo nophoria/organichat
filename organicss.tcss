@@ -5,8 +5,11 @@ TitleBar {
 ClearMsg, ConnectMsg {
   padding: 1;
   align: center middle;
-  width: 100%;
   color: $text-muted;
+}
+
+ClearMsg {
+  width: 100%;
 }
 
 StartDialog {

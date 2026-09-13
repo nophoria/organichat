@@ -15,6 +15,7 @@ from textual.widgets import (
     Label,
     ListItem,
     ListView,
+    LoadingIndicator,
     TextArea,
 )
 
@@ -136,7 +137,8 @@ class ConnectMsg(HorizontalGroup):
     """A widget to display a message so the user can wait for the recipient to connect"""
 
     def compose(self) -> None:
-        yield Label(f"[i d]Waiting for {self.app.chatter} to connect...[/]")
+        yield Label(f"[i d]Waiting for {self.app.chatter} to connect[/]")
+        yield LoadingIndicator()
                 
 class ClearMsg(HorizontalGroup):
     """A widget to display a message upon chat clear"""
