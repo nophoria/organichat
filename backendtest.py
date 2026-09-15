@@ -1,13 +1,26 @@
 import backend
 import sys
 import os
+import threading
+import time
 
 def ClearLog():
-    if os.path.exists("test.log"): os.remove("test.log")
+    if os.path.exists("test.log"): 
+        os.remove("test.log")
+
+def RunServerBackground(Server):
+    try:
+        Server.Run()
+    except Exception as e:
+        sys.exit(f"Server Run Failed Err {e}")
 
 ClearLog()
-Server = backend.Server(port=6567, debug=True, logpath="test.log")
 
+try:
+    Server = backend.Server(port=6567, debug=True, logpath="test.log")
+    BackendHandler = backend.BackendHandler(ServerIP="localhost", Port=6567)
+except Exception as e:
+    print(f"Server/Backend Handler Init Failed Err {e}")
 
 def ReadLogs():
     LogList = []
@@ -41,16 +54,19 @@ def ReadLogs():
     
     return LogList
 
+BatchTestNum = 100
+
+print("Starting Log Tests")
+
 ClearLog()
-LoopTestNum = 100
-for i in range(100):
+for i in range(BatchTestNum):
     Server.Log(f"TestingLine{i+1}", ErrLevel=4)
 LogList = ReadLogs()
 
-if (len(LogList) != 100):
-    sys.exit(f"Log Test Failed, Log File Does Not Contain {LoopTestNum} Entries When {LoopTestNum} Entries Logged")
+if (len(LogList) != BatchTestNum):
+    sys.exit(f"Log Test Failed, Log File Does Not Contain {BatchTestNum} Entries When {BatchTestNum} Entries Logged")
 
-for i in range(100):
+for i in range(BatchTestNum):
     if (LogList[i]["loglevel"] != "[DEBUG]"):
         sys.exit(f"Log Test Failed, Log Level For Line {i+1} Entry Is Not [DEBUG]")
 
@@ -60,4 +76,29 @@ for i in range(100):
     if (Actual != Expected):
         sys.exit(f"Log Test Failed, Log Data For Line {i+1} Does Not Match Expected Data")
 
+ClearLog()
 print("Log Tests Passed")
+print("Starting Msg Tests")
+
+server_thread = threading.Thread(target=RunServerBackground, args=(Server,), daemon=True)
+server_thread.start()
+
+time.sleep(0.1)
+
+TestMessageList = [f"Test Message {i+1}" for i in range(BatchTestNum)]
+for i in range(BatchTestNum):
+    BackendHandler.SendMsg(TestMessageList[i])
+
+time.sleep(0.1)
+
+try:
+	Pulled = BackendHandler.PullMsgs()
+	if Pulled:
+		print(f"Received messages: {Pulled}")
+	else:
+		sys.exit("Test Failed No Data Returned By Server")
+
+except Exception as e:
+    sys.exit(f"Error pulling messages: {e}")
+
+print("All Backend Tests Passed")
