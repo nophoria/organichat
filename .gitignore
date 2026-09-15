@@ -1,2 +1,3 @@
 *saved.json
 *.log
+*__pycache__*
