@@ -26,6 +26,7 @@ chatter_ip = ""
 
 
 class LabelItem(ListItem):
+    """Class to have a custom LabelItem"""
 
     def __init__(self, label: str) -> None:
         super().__init__()
@@ -34,12 +35,21 @@ class LabelItem(ListItem):
     def compose( self ) -> ComposeResult:
         yield Label(self.label)
 
-class StartDialog(Widget):
+class StartDialog(VerticalScroll):
     """Widget to initiate a connection"""
 
     def __init__(self):
         super().__init__()
 
+
+        try:
+            with open('logo.txt', 'r', encoding='utf-8') as f:
+                self.logo = f.read()
+        except Exception as e:
+            self.logo = """  _  ._ _   _. ._  o  _ |_   _. _|_ 
+ (_) | (_| (_| | | | (_ | | (_|  |_ 
+        _|                          
+ """
         try:
             self.saved_err = False
             self.saved_dec_err = False
@@ -53,6 +63,7 @@ class StartDialog(Widget):
             self.saved = {}
 
     def compose(self) -> ComposeResult:
+        yield Label(self.logo, id="logolabel")
         yield Input(placeholder="ip address...", id="ipentry")
 
         if len(self.saved) > 0:
@@ -75,7 +86,12 @@ class StartDialog(Widget):
 
     def on_input_submitted(self):
         """connect to client here"""
-        self.app.chatter = self.query_one(Input).value
+        val_submitted = self.query_one(Input).value
+        if val_submitted.strip():
+            val_submitted = val_submitted.strip()
+            self.app.chatter = val_submitted
+            self.app.startdlg.display = False
+            self.app.chatwin.display = True
 
 class TitleBar(HorizontalGroup):
     """The titlebar widget shown at the top of a conversation"""
@@ -128,23 +144,29 @@ class Msg(Widget):
     def compose(self) -> ComposeResult:
         """Compose message instance"""
 
-        md_msg = Label(msg_sent.strip(), classes="msgcontent")
+        md_msg = Label(msg_sent, classes="msgcontent")
         md_msg.border_title = self.text
         yield md_msg
 
 
-class ConnectMsg(HorizontalGroup):
+class ConnLoadMsg(HorizontalGroup):
     """A widget to display a message so the user can wait for the recipient to connect"""
 
     def compose(self) -> None:
-        yield Label(f"[i d]Waiting for {self.app.chatter} to connect[/]")
-        yield LoadingIndicator()
+        yield Label(f"[i d]Waiting for {self.app.chatter} to connect[/]", id="connmsg")
+        yield LoadingIndicator(id="connload")
                 
 class ClearMsg(HorizontalGroup):
     """A widget to display a message upon chat clear"""
 
     def compose(self) -> None:
         yield Label("[i d]The chat was cleared[/]")
+
+class ConnMsg(HorizontalGroup):
+    """A widget to display a message upon chat clear"""
+
+    def compose(self) -> None:
+        yield Label("[i d]{self.app.chatter} has connected! Chat away :3[/]")
 
 class MsgHistory(VerticalScroll):
     """A widget to display message history"""
@@ -184,10 +206,9 @@ class ChatWindow(Widget):
 
         msg_input = self.query_one("#msginput", MsgInputTxt)
         msg_user = "0.0.0.0"
-
         msg = msg_input.text
+        
         if msg.strip():
-            msg = msg.strip()
             msg_sent = msg
             msg_input.text = ""
             history = self.query_one("#msghistory", MsgHistory)
@@ -196,10 +217,15 @@ class ChatWindow(Widget):
             history.mount(new_msg)
             new_msg.scroll_visible()
 
-            msg_input.focus()
-
             if msg in self.CMDS:
                 self.CMDS[msg]()
+        else:
+            self.app.bell()
+            self.app.notify("You cannot send blank messages!", severity="error")
+         
+        msg_input.text = ""
+        msg_input.focus()
+         
     
     def clear(self):
         msgs = self.query(Msg)
@@ -222,6 +248,7 @@ class ChatWindow(Widget):
     def leave(self):
         self.app.chatwin.display = False
         self.app.startdlg.display = True
+        self.app.startdlg.query_one(Input).value = ""
 
 
 class OrganichatClient(App):
@@ -281,14 +308,14 @@ class OrganichatClient(App):
         if clearmsgs:
             clearmsgs.remove()
         
-        connmsgs = self.chatwin.query(ConnectMsg)
+        connmsgs = self.chatwin.query(ConnLoadMsg)
         if connmsgs:
             connmsgs.remove()
         
         msginput = self.chatwin.query_one(MsgInputTxt)
         msginput.text = ""
 
-        connmsg = ConnectMsg()
+        connmsg = ConnLoadMsg()
         self.chatwin.query_one(MsgHistory).mount(connmsg)
         #msginput.read_only = True #TODO: once backend is done renable this to stop msg sendong until someone conn
 
