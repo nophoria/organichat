@@ -16,9 +16,10 @@ def RunServerBackground(Server):
 
 ClearLog()
 
+Pass = "IHateEncryptionAndTheDecodeMethod"
 try:
-    Server = backend.Server(port=6567, debug=True, logpath="test.log")
-    BackendHandler = backend.BackendHandler(ServerIP="localhost", Port=6567)
+    Server = backend.Server(port=6567, debug=True, logpath="test.log", Pass=Pass)
+    BackendHandler = backend.BackendHandler(ServerIP="localhost", Port=6567, Pass=Pass)
 except Exception as e:
     print(f"Server/Backend Handler Init Failed Err {e}")
 
@@ -56,6 +57,8 @@ def ReadLogs():
 
 BatchTestNum = 100
 
+StartTime = time.time()
+
 print("Starting Log Tests")
 
 ClearLog()
@@ -77,7 +80,8 @@ for i in range(BatchTestNum):
         sys.exit(f"Log Test Failed, Log Data For Line {i+1} Does Not Match Expected Data")
 
 ClearLog()
-print("Log Tests Passed")
+LogEndTime = time.time()
+print(f"Log Tests Passed After {(LogEndTime - StartTime):.6f} Seconds")
 print("Starting Msg Tests")
 
 server_thread = threading.Thread(target=RunServerBackground, args=(Server,), daemon=True)
@@ -101,4 +105,7 @@ try:
 except Exception as e:
     sys.exit(f"Error pulling messages: {e}")
 
-print("All Backend Tests Passed")
+MsgEndTime = time.time()
+print(f"Msg Tests Passed After {(MsgEndTime - LogEndTime):.6f} Seconds")
+
+print(f"All Backend Tests Passed After {(MsgEndTime - StartTime):.6f} Seconds")
