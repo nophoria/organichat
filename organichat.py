@@ -1,7 +1,9 @@
 # "there is high-res ascii art of ppl's ascii parts" -js
+import asyncio
 import json
 from time import localtime, strftime
 
+import backend as back
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import HorizontalGroup, VerticalScroll
@@ -19,11 +21,15 @@ from textual.widgets import (
     TextArea,
 )
 
+from textual import work
+
 msg_sent = ""
 msg_user = ""
-you = "0.0.0.0" #TODO: implement ip addr detection - public or local?
+YOU = "0.0.0.0" #TODO: implement ip addr detection - public or local?
 chatter_ip = ""
-
+SERVER = "localhost"
+passphrase = ""
+ready = False
 
 class LabelItem(ListItem):
     """Class to have a custom LabelItem"""
@@ -64,7 +70,10 @@ class StartDialog(VerticalScroll):
 
     def compose(self) -> ComposeResult:
         yield Label(self.logo, id="logolabel")
-        yield Input(placeholder="ip address...", id="ipentry")
+        yield HorizontalGroup(
+            Input(placeholder="ip address...", id="ipentry"),
+            Input(placeholder="passphrase...", id="passentry")
+        )
 
         if len(self.saved) > 0:
             yield Label("[i d]or pick from your saved devices...[/]", id="saveddevtitle")
@@ -86,7 +95,10 @@ class StartDialog(VerticalScroll):
 
     def on_input_submitted(self):
         """connect to client here"""
-        val_submitted = self.query_one(Input).value
+        global passphrase
+        val_submitted = self.query_one("#ipentry", Input).value
+        passphrase = self.query_one("#passentry", Input).value
+
         if val_submitted.strip():
             val_submitted = val_submitted.strip()
             self.app.chatter = val_submitted
@@ -188,6 +200,10 @@ class ChatWindow(Widget):
             f"{self.CMD_PREFIX}leave" : lambda: self.leave()
         }
 
+        self.msg_his_len = 0
+        self.msg_his = []
+        self.connected = False
+
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
         yield TitleBar()
@@ -198,6 +214,7 @@ class ChatWindow(Widget):
     def on_mount(self) -> None:
         msg_input_txt = self.msg_input.query_one("#msginput", MsgInputTxt)
         msg_input_txt.focus()
+        #msg_input_txt.read_only = True
 
     def action_send_msg(self) -> None:
         """Send the message over tcp"""
@@ -211,22 +228,62 @@ class ChatWindow(Widget):
         if msg.strip():
             msg_sent = msg
             msg_input.text = ""
-            history = self.query_one("#msghistory", MsgHistory)
-
-            new_msg = Msg()
-            history.mount(new_msg)
-            new_msg.scroll_visible()
-
-            if msg in self.CMDS:
-                self.CMDS[msg]()
+            self.append_msg(msg_sent)
         else:
             self.app.bell()
             self.app.notify("You cannot send blank messages!", severity="error")
          
         msg_input.text = ""
         msg_input.focus()
-         
+
+    def append_msg(self, msg):
+        history = self.query_one("#msghistory", MsgHistory)
+
+        new_msg = Msg()
+        history.mount(new_msg)
+        new_msg.scroll_visible()
+
+        if msg in self.CMDS:
+            self.CMDS[msg]()
     
+    def send_msg(self, msg):
+        """send message to client via tcp"""
+        self.backend.SendMsg(msg)
+    
+    @work(exclusive=True)
+    async def monitor_msgs(self):
+        msg_his = self.backend.PullMsgs()
+
+        if len(msg_his) > self.msg_his_len:
+            for msg in msg_his[:-(len(msg_his) - self.msg_his_len)]:
+                if msg == "!ready" and self.connected == False:
+                    self.send_msg("!ready")
+                    self.connected = True
+                    self.handle_conn()
+                else:
+                    self.append_msg(msg)
+        
+            self.msg_his_len = len(msg_his)
+
+            await asyncio.sleep(0.1)
+    
+    def handle_conn(self):
+        msg_input = self.query_one("#msginput", MsgInputTxt)
+        #msg_input.read_only = False
+
+        connmsg = self.query(ConnLoadMsg)
+        if connmsg:
+            connmsg.remove()
+        
+        history = self.query_one("#msghistory", MsgHistory)
+        history.mount(ConnMsg())
+    
+    def start_con(self):
+        self.backend = back.BackendHandler(ServerIP=SERVER, Port=6567, Pass=passphrase)
+        self.backend.SendMsg("!ready")
+        
+        self.monitor_msgs()
+
     def clear(self):
         msgs = self.query(Msg)
         if msgs:
@@ -293,6 +350,8 @@ class OrganichatClient(App):
         msg_input_txt = self.chatwin.msg_input.query_one("#msginput", MsgInputTxt)
         msg_input_txt.focus()
 
+        self.chatwin.start_con()
+
     def action_toggle_dark(self) -> None:
         """An action to toggle dark mode."""
         self.theme = (
@@ -317,7 +376,6 @@ class OrganichatClient(App):
 
         connmsg = ConnLoadMsg()
         self.chatwin.query_one(MsgHistory).mount(connmsg)
-        #msginput.read_only = True #TODO: once backend is done renable this to stop msg sendong until someone conn
 
     def ping(self):
         self.bell()

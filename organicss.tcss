@@ -33,6 +33,14 @@ ListItem {
   height: auto;
 }
 
+#ipentry {
+  width: 1fr;
+}
+
+#passentry {
+  width: 1fr;
+}
+
 #connmsg {
   width: 2fr;
 }
