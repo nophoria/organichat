@@ -4,6 +4,7 @@ import hashlib
 
 def HashDat(Hash, Dat): 
     return bytes(Byte ^ Hash[i % len(Hash)] for i, Byte in enumerate(Dat))
+
 class BackendHandler:
     def __init__(self, ServerIP="localhost", Port=6567, Pass="InputAPasswordMoron"):
         self.ServerIP = ServerIP
@@ -50,7 +51,9 @@ class BackendHandler:
                 
             ClientSock.close()
 
-            MsgList = HashDat(self.Hash, (Response.decode("utf-32").split(",[NewMsg] ")))
+            MsgList = HashDat(self.Hash, (Response))
+            MsgList = MsgList.decode("utf-32")
+            MsgList = MsgList.split(",[NewMsg] ")
             return MsgList
 
         except Exception as e:
@@ -83,7 +86,9 @@ class Server:
             self.Log(f"Client Connected From {ClientAddrSanitised}", ErrLevel=0)
 
             try:
-                HeaderDat = ClientSock.recv(1)
+                Dat = ClientSock.recv(8193)
+                DecodedDat = HashDat(self.Hash, Dat)
+                HeaderDat = bytes([Dat[0]])
                 HeaderDat = HashDat(self.Hash, HeaderDat)
 
                 if len(HeaderDat) == 0:
@@ -95,15 +100,18 @@ class Server:
                 if IsPull:
                     self.Log("Client Requested Msg History", ErrLevel=0)
                     ClientSock.send(HashDat(self.Hash, ((",[NewMsg] ".join(self.MsgHistory)).encode("utf-32"))))
+                
                 else:
                     self.Log("Client Sent New Msg", ErrLevel=0)
-                    Message = ClientSock.recv(8188)
+                    Message = DecodedDat[1:8193].decode("utf-32")
                     if len(Message) > 0:
-                        DecodedMessage = HashDat(self.Hash, Message)
                         if self.debug:
-                            self.Log(f"Message Received From {ClientAddrSanitised} [{DecodedMessage}]", ErrLevel=0)
+                            self.Log(f"Message Received From {ClientAddrSanitised} [{Message}]", ErrLevel=0)
                         else:
                             self.Log(f"Message Received From {ClientAddrSanitised}", ErrLevel=0)
+
+                        self.MsgHistory.append(Message)
+                        self.Log(self.MsgHistory, ErrLevel=4)
 
             except Exception as e:
                 self.Log(f"TCP Conn Err {ClientAddrSanitised}: {e}", ErrLevel=2)
@@ -117,11 +125,16 @@ class Server:
         with open(self.logpath, "a") as LogFile:
             if ErrLevel == 0:
                 LogFile.write(f"[{time.strftime('%H:%M:%S')}], [INFO ], {Msg}\n")
+                print(f"[{time.strftime('%H:%M:%S')}], [INFO ], {Msg}")
             elif ErrLevel == 1:
                 LogFile.write(f"[{time.strftime('%H:%M:%S')}], [WARN ], {Msg}\n")
+                print(f"[{time.strftime('%H:%M:%S')}], [WARN ], {Msg}")
             elif ErrLevel == 2:
                 LogFile.write(f"[{time.strftime('%H:%M:%S')}], [ERROR], {Msg}\n")
+                print(f"[{time.strftime('%H:%M:%S')}], [ERROR], {Msg}")
             elif ErrLevel == 3:
                 LogFile.write(f"[{time.strftime('%H:%M:%S')}], [FATAL], {Msg}\n")
+                print(f"[{time.strftime('%H:%M:%S')}], [FATAL], {Msg}")
             elif ErrLevel == 4:
                 LogFile.write(f"[{time.strftime('%H:%M:%S')}], [DEBUG], {Msg}\n")
+                print(f"[{time.strftime('%H:%M:%S')}], [DEBUG], {Msg}")

@@ -6,7 +6,7 @@ time.sleep(0.1)
 
 while True:
     time.sleep(0.1)
-    Backend.SendMsg(input())
+    Backend.SendMsg(input("> "))
     print("Sent")
     time.sleep(1)
     print(Backend.PullMsgs())
