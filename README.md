@@ -1,5 +1,5 @@
 > [!Warning]
->  organichat is very much _in development_ and currently there is no networking capability. While I have build some sort of backend, I have yet to build it into the UI (I shall once I finish it).
+>  organichat is very much _in development_ and currently there is no networking capability. While there is a backend built it is currently undergoing a re-write and I have yet to build it into the UI. Expect half-baked or missing features and little to no functionality.
 
 # organichat.
 Most mainstream messaging apps have end-to-end encryption, so no one can see your messages other than the recipient and the sender - right? What if your phone is stolen or someone is looking through your chats (i.e parents, friends)? 
